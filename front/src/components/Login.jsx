@@ -8,12 +8,20 @@ const LoginForm = () => {
   const {
     register,
     handleSubmit,
+<<<<<<< HEAD
     formState: { errors },
   } = useForm();
+=======
+    setError,
+    formState: { errors },
+  } = useForm();
+
+>>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
   const navigate = useNavigate();
 
   const onSubmit = async (data) => {
     try {
+<<<<<<< HEAD
       const response = await axios.post("http://localhost:3001/gen/login", {
         Correo: data.Correo,
         HashContrasena: data.HashContrasena,
@@ -25,15 +33,50 @@ const LoginForm = () => {
       }
     } catch (error) {
       console.error("Error al iniciar sesión:", error);
+=======
+      const response = await axios.post("http://localhost:5001/login", {
+        correo: data.Correo,
+        password: data.HashContrasena,
+      });
+
+      const { token, role, nombre } = response.data;
+
+      // Guardar sesión
+      localStorage.setItem("token", token);
+      localStorage.setItem("userRole", role);
+      localStorage.setItem("nombre", nombre);
+
+      // Redirigir por rol
+      if (role.toLowerCase() === "mesero") navigate("/comanda");
+      else if (role.toLowerCase() === "cocinero") navigate("/estado");
+      else if (role.toLowerCase() === "gerente") navigate("/stats");
+      else navigate("/");
+
+    } catch (error) {
+      console.error("Error al iniciar sesión:", error);
+
+      setError("Correo", {
+        type: "manual",
+        message: "Correo o contraseña incorrectos",
+      });
+      setError("HashContrasena", {
+        type: "manual",
+        message: "Verifica tus credenciales",
+      });
+>>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
     }
   };
 
   return (
     <div
       className="container d-flex justify-content-center align-items-center vh-100"
+<<<<<<< HEAD
       style={{
         background: "linear-gradient(to right, #243B55, #141E30)",
       }}
+=======
+      style={{ background: "linear-gradient(to right, #243B55, #141E30)" }}
+>>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
     >
       <div
         className="card shadow-lg border-0"
@@ -81,9 +124,13 @@ const LoginForm = () => {
                 </label>
                 <input
                   type="email"
+<<<<<<< HEAD
                   className={`form-control ${
                     errors.Correo ? "is-invalid" : ""
                   }`}
+=======
+                  className={`form-control ${errors.Correo ? "is-invalid" : ""}`}
+>>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
                   {...register("Correo", {
                     required: "El correo es obligatorio",
                     pattern: {
@@ -104,9 +151,13 @@ const LoginForm = () => {
                 </label>
                 <input
                   type="password"
+<<<<<<< HEAD
                   className={`form-control ${
                     errors.HashContrasena ? "is-invalid" : ""
                   }`}
+=======
+                  className={`form-control ${errors.HashContrasena ? "is-invalid" : ""}`}
+>>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
                   {...register("HashContrasena", {
                     required: "La contraseña es obligatoria",
                     minLength: {
@@ -143,4 +194,8 @@ const LoginForm = () => {
   );
 };
 
+<<<<<<< HEAD
 export default LoginForm;
+=======
+export default LoginForm;
+>>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
