@@ -599,7 +599,7 @@ app.get('/detalle', async (req, res) => {
         p.Nombre AS nombre_plato,
         m.Numero AS numero_mesa,
         d.Cantidad,
-        d.CodEstadoPedido AS estado_detalle,
+        pe.CodEstadoPedido AS estado_detalle,
         d.Detalles AS detalle_plato,
         pe.Fecha,
         pe.Hora,
@@ -633,14 +633,14 @@ app.get('/detalle', async (req, res) => {
 //} );
 
 app.post('/detalle', async (req, res) => {
-  const { CodPedido, CodPlatillo, Cantidad, CodEstadoPedido, Detalles } = req.body;
+  const { CodPedido, CodPlatillo, Cantidad, Detalles } = req.body;
 
   try {
     const result = await pool.query(
-      `INSERT INTO detalles (CodPlatillo, CodPedido, Cantidad, CodEstadoPedido, Detalles)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO detalles (CodPlatillo, CodPedido, Cantidad, Detalles)
+       VALUES ($1, $2, $3, $4)
        RETURNING *`,
-      [CodPlatillo, CodPedido, Cantidad, CodEstadoPedido, Detalles || 'Sin observaciones']
+      [CodPlatillo, CodPedido, Cantidad, Detalles || 'Sin observaciones']
     );
 
     res.status(201).json(result.rows[0]);
