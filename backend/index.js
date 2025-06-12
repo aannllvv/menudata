@@ -176,23 +176,17 @@ app.get('/comandas', async (req, res) => {
 //});
 
 app.post('/comandas', async (req, res) => {
-  const { CodUsuario, CodMesa, CodEstadoPedido, Detalles } = req.body;
+  const { CodUsuario, CodMesa, CodEstadoPedido } = req.body;
 
   try {
-    const query = `
-      INSERT INTO Pedido (
-        CodUsuario, CodMesa, CodEstadoPedido, Fecha, Hora, Valor, Detalles
-      ) VALUES (
-        $1, $2, $3, CURRENT_DATE, CURRENT_TIME, 0, $4
-      )
+    const result = await pool.query(`
+      INSERT INTO pedido (
+        CodUsuario, CodMesa, CodEstadoPedido, Fecha, Hora, Valor
+      ) VALUES ($1, $2, $3, CURRENT_DATE, CURRENT_TIME, 0)
       RETURNING CodPedido;
-    `;
+    `, [CodUsuario, CodMesa, CodEstadoPedido]);
 
-    const result = await pool.query(query, [CodUsuario, CodMesa, CodEstadoPedido, Detalles]);
     const nuevoPedidoId = result.rows[0].codpedido;
-
-    console.log("✅ Pedido creado:", result.rows[0]);
-
     res.status(201).json({ CodPedido: nuevoPedidoId });
   } catch (err) {
     console.error("Error al agregar la comanda:", err);
@@ -234,7 +228,7 @@ app.put('/pedido/:CodPedido', async (req, res) => {
   }
 
   const query = `
-    UPDATE Pedido
+    UPDATE pedido
     SET CodEstadoPedido = $1
     WHERE CodPedido = $2
   `;
@@ -374,6 +368,16 @@ app.post('/mesa', async (req, res) => {
   }
 });
 ////////////////////////////////////////////// NOO
+//app.get('/estado', async (req, res) => {
+//  try {
+//    const result = await pool.query('SELECT * FROM estado ORDER BY id_estado ASC');
+//    res.json(result.rows);
+//  } catch (err) {
+//    console.error(err);
+//    res.status(500).send('Error al obtener estados');
+//  }
+//});
+
 app.get('/estado', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM estado ORDER BY id_estado ASC');
@@ -589,26 +593,27 @@ app.get('/detalle', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
-        d.CodDetalle,
+        d.CodDetalles,
         d.CodPedido,
         u.Nombre AS nombre_empleado,
         p.Nombre AS nombre_plato,
         m.Numero AS numero_mesa,
         d.Cantidad,
         d.CodEstadoPedido AS estado_detalle,
+        d.Detalles AS detalle_plato,
         pe.Fecha,
         pe.Hora,
-        pe.Detalles
-      FROM detalle d
+        pe.Detalles AS detalle_comanda
+      FROM detalles d
       JOIN pedido pe ON d.CodPedido = pe.CodPedido
       JOIN usuario u ON pe.CodUsuario = u.CodUsuario
       JOIN platillo p ON d.CodPlatillo = p.CodPlatillo
       JOIN mesa m ON pe.CodMesa = m.CodMesa
-      ORDER BY d.CodDetalle ASC`
+      ORDER BY d.CodDetalles ASC`
     );
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error('Error al obtener detalles:', err);
     res.status(500).send('Error al obtener detalles');
   }
 });
@@ -632,10 +637,10 @@ app.post('/detalle', async (req, res) => {
 
   try {
     const result = await pool.query(
-      `INSERT INTO detalle (CodPlatillo, CodPedido, Cantidad, CodEstadoPedido, Detalles)
+      `INSERT INTO detalles (CodPlatillo, CodPedido, Cantidad, CodEstadoPedido, Detalles)
        VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [CodPlatillo, CodPedido, Cantidad, CodEstadoPedido, Detalles]
+      [CodPlatillo, CodPedido, Cantidad, CodEstadoPedido, Detalles || 'Sin observaciones']
     );
 
     res.status(201).json(result.rows[0]);

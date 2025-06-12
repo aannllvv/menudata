@@ -8,32 +8,14 @@ const LoginForm = () => {
   const {
     register,
     handleSubmit,
-<<<<<<< HEAD
-    formState: { errors },
-  } = useForm();
-=======
     setError,
     formState: { errors },
   } = useForm();
 
->>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
   const navigate = useNavigate();
 
   const onSubmit = async (data) => {
     try {
-<<<<<<< HEAD
-      const response = await axios.post("http://localhost:3001/gen/login", {
-        Correo: data.Correo,
-        HashContrasena: data.HashContrasena,
-      });
-      if (response.data.message === "Inicio de sesión exitoso") {
-        const { IDRol } = response.data;
-        localStorage.setItem("userRole", IDRol);
-        navigate(IDRol === "Administrador" ? "/admin-dashboard" : "/Catalogo");
-      }
-    } catch (error) {
-      console.error("Error al iniciar sesión:", error);
-=======
       const response = await axios.post("http://localhost:5001/login", {
         correo: data.Correo,
         password: data.HashContrasena,
@@ -63,20 +45,13 @@ const LoginForm = () => {
         type: "manual",
         message: "Verifica tus credenciales",
       });
->>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
     }
   };
 
   return (
     <div
       className="container d-flex justify-content-center align-items-center vh-100"
-<<<<<<< HEAD
-      style={{
-        background: "linear-gradient(to right, #243B55, #141E30)",
-      }}
-=======
       style={{ background: "linear-gradient(to right, #243B55, #141E30)" }}
->>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
     >
       <div
         className="card shadow-lg border-0"
@@ -124,13 +99,7 @@ const LoginForm = () => {
                 </label>
                 <input
                   type="email"
-<<<<<<< HEAD
-                  className={`form-control ${
-                    errors.Correo ? "is-invalid" : ""
-                  }`}
-=======
                   className={`form-control ${errors.Correo ? "is-invalid" : ""}`}
->>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
                   {...register("Correo", {
                     required: "El correo es obligatorio",
                     pattern: {
@@ -151,13 +120,7 @@ const LoginForm = () => {
                 </label>
                 <input
                   type="password"
-<<<<<<< HEAD
-                  className={`form-control ${
-                    errors.HashContrasena ? "is-invalid" : ""
-                  }`}
-=======
                   className={`form-control ${errors.HashContrasena ? "is-invalid" : ""}`}
->>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
                   {...register("HashContrasena", {
                     required: "La contraseña es obligatoria",
                     minLength: {
@@ -194,8 +157,4 @@ const LoginForm = () => {
   );
 };
 
-<<<<<<< HEAD
 export default LoginForm;
-=======
-export default LoginForm;
->>>>>>> 535774306257de4ef98c040f39edc912c1f69f10

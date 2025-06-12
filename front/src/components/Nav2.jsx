@@ -1,17 +1,10 @@
 import React from "react";
-<<<<<<< HEAD
-import { Link, Outlet } from "react-router-dom";
-import imagenes from "../assets/img/imagenes";
-
-const Nav2 = () => {
-=======
 import { Link, Outlet, useLocation } from "react-router-dom";
 import imagenes from "../assets/img/imagenes";
 
 const Nav2 = () => {
   const location = useLocation();
 
->>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
   return (
     <div>
       <nav className="navbar navbar-expand-lg navbar-dark bg-dark shadow-sm">
@@ -24,7 +17,7 @@ const Nav2 = () => {
               className="img-fluid"
               style={{ maxWidth: "50px", maxHeight: "50px", marginRight: "10px" }}
             />
-            <span className="fs-5 fw-bold text-uppercase">Restaurante Enacción</span>
+            <span className="fs-5 fw-bold text-uppercase">Pollos Shiken</span>
           </Link>
 
           {/* Botón de colapsar para móviles */}
@@ -61,8 +54,6 @@ const Nav2 = () => {
               <li className="nav-item">
                 <Link to="/Reportes" className="nav-link">Reportes</Link>
               </li>
-<<<<<<< HEAD
-=======
               <li className="nav-item">
                 <Link
                   to="/login"
@@ -71,7 +62,6 @@ const Nav2 = () => {
                   Iniciar Sesión
                 </Link>
               </li>
->>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
             </ul>
           </div>
         </div>
@@ -85,8 +75,4 @@ const Nav2 = () => {
   );
 };
 
-<<<<<<< HEAD
 export default Nav2;
-=======
-export default Nav2;
->>>>>>> 535774306257de4ef98c040f39edc912c1f69f10

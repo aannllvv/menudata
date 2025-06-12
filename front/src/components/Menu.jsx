@@ -51,7 +51,6 @@ const Catalogo = () => {
             <div className="col-md-4" key={index}>
               <div className="card h-100 shadow-sm" style={{ borderRadius: "10px" }}>
                 <img
-<<<<<<< HEAD
                   src={plato.LinkImagen}
                   className="card-img-top"
                   alt={plato.Nombre}
@@ -69,20 +68,6 @@ const Catalogo = () => {
                   </h5>
                   <p className="card-text text-muted">{plato.Descripcion}</p>
                   <p className="card-text text-muted">${plato.Valor}</p>
-=======
-                  src={plato.link_imagen}
-                  className="card-img-top"
-                  alt={plato.nombre_plato}
-                  style={{ borderTopLeftRadius: "10px", borderTopRightRadius: "10px" }}
-                />
-                <div className="card-body text-center">
-                  <h5 className="card-title" style={{ fontWeight: "600" }}>
-                    {plato.nombre_plato}
-                  </h5>
-                  <p className="card-text text-muted">{plato.descripcion}</p>
-                  <p className="card-text text-muted">${plato.precio_unitario}</p>
-                  
->>>>>>> 535774306257de4ef98c040f39edc912c1f69f10
                 </div>
               </div>
             </div>

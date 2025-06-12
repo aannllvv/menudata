@@ -34,15 +34,15 @@ const RegistroComanda = () => {
   const [idNumeroOrden, setIdNumeroOrden] = useState(null);  
   const [comandaEditada, setComandaEditada] = useState(null);
   const [botonHabilitado, setBotonHabilitado] = useState(false);
-
+// Listo
   const cargarEmpleados = async () => {
     try {
       const endpoints = [
         {
           url: "http://localhost:5001/meseros",
           setState: setMeseroOptions,
-          labelFn: (item) => `${item.nombre} ${item.apellido}`,
-          idKey: "id_empleado",
+          labelFn: (item) => `${item.Nombre}`,
+          idKey: "CodUsuario",
         }
       ];
 
@@ -72,15 +72,15 @@ const RegistroComanda = () => {
       });
     }
   };
-
+// Listo
   const cargarMenu = async () => {
     try {
       const endpoints = [
         {
           url: "http://localhost:5001/menu",
           setState: setMenuOptions,
-          labelFn: (item) => `${item.id_plato} - ${item.nombre_plato}`,
-          idKey: "id_plato",
+          labelFn: (item) => `${item.CodPlatillo} - ${item.Nombre}`,
+          idKey: "CodPlatillo",
         }
       ];
 
@@ -110,12 +110,12 @@ const RegistroComanda = () => {
       });
     }
   };
-
+// Listo
   const cargarMesas = async () => {
     try {
       const response = await Axios.get("http://localhost:5001/mesa");
       if (response.status === 200) {
-        setMesaOptions(response.data.map((item) => ({ value: item.id_mesa, label: item.numero })));
+        setMesaOptions(response.data.map((item) => ({ value: item.CodMesa, label: item.Numero })));
       } else {
         throw new Error("Error al cargar las mesas");
       }
@@ -128,6 +128,7 @@ const RegistroComanda = () => {
       });
     }
   };
+
 
   const obtenerDetalles = async () => {
     try {
@@ -186,22 +187,23 @@ const RegistroComanda = () => {
       if (!comandaEditada) {
         // Si es una nueva comanda, primero la crea
         const comandaResponse = await Axios.post("http://localhost:5001/comandas", {
-          id_empleado: selectedMesero.value,
-          id_mesa: mesaSeleccionada,
-          id_estado: 4,
-          detalles: data.detalles || "Sin Detalles",
+          CodUsuario: selectedMesero.value,
+          CodMesa: mesaSeleccionada,
+          CodEstadoPedido: 1, // Código que representa "En preparación"
+          Detalles: data.detalles || "Sin Detalles",
         });
-  
-        numeroOrden = comandaResponse.data.id_numero_orden;
+      
+        numeroOrden = comandaResponse.data.CodPedido;
       }
   
       // Enviar los detalles
       for (const item of orden) {
         await Axios.post("http://localhost:5001/detalle", {
-          id_plato: item.id_plato,
-          id_numero_orden: numeroOrden,
-          cantidad: item.cantidad,
-          id_estado: 1,
+          CodPlatillo: item.id_plato,
+          CodPedido: numeroOrden,
+          Cantidad: item.cantidad,
+          CodEstadoPedido: 1,
+          Detalles: data.detalles || "Sin observaciones"
         });
       }
   
@@ -377,7 +379,7 @@ const RegistroComanda = () => {
             >
               <option value="">Seleccione una mesa</option>
               {mesaOptions.map((mesa) => (
-                <option key={mesa.value} value={mesa.label}>
+                <option key={mesa.value} value={mesa.value}>
                   {mesa.label}
                 </option>
               ))}
