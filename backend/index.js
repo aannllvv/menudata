@@ -125,55 +125,55 @@ app.get('/menu', async (req, res) => {
 });
 
 //obtener todas las comandas NOO
+//app.get('/comandas', async (req, res) => {
+//  try {
+//    const result = await pool.query(
+//      `SELECT 
+//        c.id_numero_orden,
+//        e.nombre AS nombre_empleado,
+//        ms.numero AS numero_mesa,
+//        c.id_estado AS estado_comanda,
+//        c.fecha_pedido,
+//        c.fecha_entrega,
+//        c.detalles
+//      FROM 
+//        comanda c
+//      JOIN 
+//        empleado e ON c.id_empleado = e.id_empleado
+//      JOIN
+//        mesa ms ON c.id_mesa = ms.id_mesa`
+//    );
+//    res.json(result.rows);
+//  } catch (err) {
+//    console.error(err);
+//    res.status(500).send('Error al obtener las comandas');
+//  }
+//});
+
 app.get('/comandas', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT 
-        c.id_numero_orden,
-        e.nombre AS nombre_empleado,
-        ms.numero AS numero_mesa,
-        c.id_estado AS estado_comanda,
-        c.fecha_pedido,
-        c.fecha_entrega,
-        c.detalles
-      FROM 
-        comanda c
-      JOIN 
-        empleado e ON c.id_empleado = e.id_empleado
-      JOIN
-        mesa ms ON c.id_mesa = ms.id_mesa`
-    );
+    const result = await pool.query(`
+      SELECT 
+        p.CodPedido,
+        u.Nombre AS nombre_empleado,
+        m.Numero AS numero_mesa,
+        ep.Estado AS estado_comanda,
+        p.Fecha,
+        p.Hora
+      FROM pedido p
+      JOIN usuario u ON p.CodUsuario = u.CodUsuario
+      JOIN mesa m ON p.CodMesa = m.CodMesa
+      JOIN estadoPedido ep ON p.CodEstadoPedido = ep.CodEstadoPedido
+      ORDER BY p.CodPedido ASC
+    `);
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error("Error al obtener las comandas:", err);
     res.status(500).send('Error al obtener las comandas');
   }
 });
 
-//Agregar nueva comanda  
-
-//app.post('/comandas', async (req, res) => {
-//  const { CodUsuario, CodMesa, CodEstadoPedido, Detalles } = req.body;
-//
-//  try {
-//    const query = `
-//      INSERT INTO Pedido (CodUsuario, CodMesa, CodEstadoPedido, Fecha, Hora, Valor)
-//      VALUES ($1, $2, $3, CURRENT_DATE, CURRENT_TIME, 0)
-//      RETURNING CodPedido;
-//    `;
-//
-//    const result = await pool.query(query, [CodUsuario, CodMesa, CodEstadoPedido]);
-//
-//    const nuevoPedidoId = result.rows[0].codpedido;
-//
-//    console.log("Pedido creado:", result.rows[0]);
-//
-//    res.status(201).json({ CodPedido: nuevoPedidoId });
-//  } catch (err) {
-//    console.error("Error al agregar la comanda:", err);
-//    res.status(500).send("Error al agregar la comanda");
-//  }
-//});
+//Agregar nueva comanda  SII
 
 app.post('/comandas', async (req, res) => {
   const { CodUsuario, CodMesa, CodEstadoPedido } = req.body;
@@ -248,22 +248,46 @@ app.put('/pedido/:CodPedido', async (req, res) => {
 });
 
 // Eliminar comanda por id NOO
+//app.delete('/comandas/:id', async (req, res) => {//
+//  const { id } = req.params;
+//  try {
+//    const result = await pool.query(
+//      'DELETE FROM comanda WHERE id_numero_orden = $1 RETURNING *',
+//      [id]
+//    );
+//
+//    if (result.rowCount > 0) {
+//      res.status(200).json({ message: `Comanda con id ${id} eliminada` });
+//    } else {
+//      res.status(404).json({ message: `Comanda con id ${id} no encontrada` });
+//    }
+//  } catch (err) {
+//    console.error(err);
+//    res.status(500).send('Error al eliminar la comanda');
+//  }
+//});
+
 app.delete('/comandas/:id', async (req, res) => {
   const { id } = req.params;
+
   try {
+    // Eliminar primero los detalles relacionados (si existen)
+    await pool.query('DELETE FROM Detalles WHERE CodPedido = $1', [id]);
+
+    // Luego eliminar el pedido
     const result = await pool.query(
-      'DELETE FROM comanda WHERE id_numero_orden = $1 RETURNING *',
+      'DELETE FROM Pedido WHERE CodPedido = $1 RETURNING *',
       [id]
     );
 
     if (result.rowCount > 0) {
-      res.status(200).json({ message: `Comanda con id ${id} eliminada` });
+      res.status(200).json({ message: `Pedido con ID ${id} eliminado correctamente` });
     } else {
-      res.status(404).json({ message: `Comanda con id ${id} no encontrada` });
+      res.status(404).json({ message: `Pedido con ID ${id} no encontrado` });
     }
   } catch (err) {
-    console.error(err);
-    res.status(500).send('Error al eliminar la comanda');
+    console.error('Error al eliminar el pedido:', err);
+    res.status(500).send('Error al eliminar el pedido');
   }
 });
 
@@ -431,8 +455,8 @@ app.patch('/empleados1/:id_empleado', async (req, res) => {
     res.status(500).send('Error al actualizar el empleado');
   }
 });
-/////////////////////////////////////////////// NOO
-app.get('/comandas1', async (req, res) => {
+/////////////////////////////////////////////// NOO  //////////////////////////////////////////////////////////////////////////////
+/*app.get('/comandas1', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
@@ -465,8 +489,38 @@ app.get('/comandas1', async (req, res) => {
     res.status(500).send('Error al obtener las comandas');
   }
 });
+*/
+
+app.get('/comandas1', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        p.CodPedido,
+        ep.CodEstadoPedido,
+        u.Nombre AS nombre_empleado,
+        pla.Nombre AS nombre_platillo,
+        m.Numero AS numero_mesa,
+        d.Cantidad,
+        p.Fecha,
+        p.Hora,
+        ep.Estado
+      FROM pedido p
+      JOIN detalles d ON p.CodPedido = d.CodPedido
+      JOIN platillo pla ON d.CodPlatillo = pla.CodPlatillo
+      JOIN usuario u ON p.CodUsuario = u.CodUsuario
+      JOIN mesa m ON p.CodMesa = m.CodMesa
+      JOIN estadoPedido ep ON p.CodEstadoPedido = ep.CodEstadoPedido
+      ORDER BY p.Fecha DESC, p.Hora DESC`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error al obtener las comandas:", err);
+    res.status(500).send('Error al obtener las comandas');
+  }
+});
+
 /////////////////////////////////////////////// NOO
-app.get('/comandas2', async (req, res) => {
+/*app.get('/comandas2', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
@@ -502,8 +556,47 @@ app.get('/comandas2', async (req, res) => {
     res.status(500).send('Error al obtener las comandas con detalles');
   }
 });
+*/
+
+app.get('/comandas2', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        d.CodDetalles,
+        d.CodPedido,
+        p.CodEstadoPedido,
+        ep.Estado AS estado,
+        u.Nombre AS nombre_empleado,
+        pla.Nombre AS nombre_platillo,
+        m.Numero AS numero_mesa,
+        d.Cantidad,
+        p.Fecha,
+        p.Hora,
+        COALESCE(d.Detalles, 'Sin detalles') AS detalles
+      FROM 
+        detalles d
+      JOIN 
+        pedido p ON d.CodPedido = p.CodPedido
+      JOIN 
+        usuario u ON p.CodUsuario = u.CodUsuario
+      JOIN 
+        platillo pla ON d.CodPlatillo = pla.CodPlatillo
+      JOIN 
+        mesa m ON p.CodMesa = m.CodMesa
+      JOIN 
+        EstadoPedido ep ON p.CodEstadoPedido = ep.CodEstadoPedido
+      ORDER BY p.Fecha DESC, p.Hora DESC`
+    );
+
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error al obtener las comandas con detalles:", err);
+    res.status(500).send('Error al obtener las comandas con detalles');
+  }
+});
+
 /////////////////////////////////////////////// NOO
-app.get('/comandas3', async (req, res) => {
+/*app.get('/comandas3', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
@@ -533,27 +626,83 @@ app.get('/comandas3', async (req, res) => {
     res.status(500).send('Error al obtener detalles');
 }
 });
+*/
 
-//guardar fecha de entrega comanda NOO
+app.get('/comandas3', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT 
+        d.CodDetalles,
+        d.CodPedido,
+        d.CodEstadoPedido, -- necesario para filtrar en frontend
+        u.Nombre AS nombre_empleado,
+        pl.Nombre AS nombre_platillo,
+        m.Numero AS numero_mesa,
+        d.Cantidad,
+        d.Detalles AS detalle_platillo,
+        p.Fecha,
+        p.Hora
+      FROM detalles d
+      JOIN pedido p ON d.CodPedido = p.CodPedido
+      JOIN usuario u ON p.CodUsuario = u.CodUsuario
+      JOIN platillo pl ON d.CodPlatillo = pl.CodPlatillo
+      JOIN mesa m ON p.CodMesa = m.CodMesa
+      ORDER BY d.CodDetalles ASC
+    `);
+    res.json(result.rows);
+  } catch (err) {
+    console.error("Error al obtener comandas3:", err);
+    res.status(500).send("Error al obtener comandas");
+  }
+});
+
+///////////////////////////////////////////////////// NOO
+
 app.put('/comandas3/:id', async (req, res) => {
   const { id } = req.params;
-  const { estado_detalle } = req.body;
+  const { CodEstadoPedido } = req.body;
 
   try {
     const result = await pool.query(
-      `UPDATE detalle 
-       SET id_estado = $1
-       WHERE id_detalle = $2 RETURNING *`, 
+      `UPDATE detalles 
+       SET CodEstadoPedido = $1
+       WHERE CodDetalles = $2
+       RETURNING *`,
+      [CodEstadoPedido, id]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Detalle no encontrado" });
+    }
+
+    res.json({ message: "Estado actualizado correctamente", detalle: result.rows[0] });
+  } catch (error) {
+    console.error("Error al actualizar el detalle:", error);
+    res.status(500).json({ message: "Error interno del servidor" });
+  }
+});
+
+//guardar fecha de entrega comanda NOO
+app.put('/comandas3/:id', async (req, res) => {
+  const { id } = req.params; // id = CodPedido
+  const { estado_detalle } = req.body; // nuevo estado
+
+  try {
+    const result = await pool.query(
+      `UPDATE pedido 
+       SET CodEstadoPedido = $1
+       WHERE CodPedido = $2
+       RETURNING *`,
       [estado_detalle, id]
     );
 
     if (result.rowCount === 0) {
-      return res.status(404).json({ message: "Comanda no encontrada" });
+      return res.status(404).json({ message: "Pedido no encontrado" });
     }
 
-    res.json({ message: "Estado actualizado correctamente", comanda: result.rows[0] });
+    res.json({ message: "Estado actualizado correctamente", pedido: result.rows[0] });
   } catch (error) {
-    console.error("Error al actualizar la comanda:", error);
+    console.error("Error al actualizar el estado del pedido:", error);
     res.status(500).json({ message: "Error interno del servidor" });
   }
 });
@@ -603,7 +752,7 @@ app.get('/detalle', async (req, res) => {
         d.Detalles AS detalle_plato,
         pe.Fecha,
         pe.Hora,
-        pe.Detalles AS detalle_comanda
+        d.Detalles AS detalle_comanda
       FROM detalles d
       JOIN pedido pe ON d.CodPedido = pe.CodPedido
       JOIN usuario u ON pe.CodUsuario = u.CodUsuario
@@ -633,14 +782,14 @@ app.get('/detalle', async (req, res) => {
 //} );
 
 app.post('/detalle', async (req, res) => {
-  const { CodPedido, CodPlatillo, Cantidad, Detalles } = req.body;
+  const { CodPedido, CodPlatillo, Cantidad, CodEstadoPedido, Detalles } = req.body;
 
   try {
     const result = await pool.query(
-      `INSERT INTO detalles (CodPlatillo, CodPedido, Cantidad, Detalles)
-       VALUES ($1, $2, $3, $4)
+      `INSERT INTO detalles (CodPlatillo, CodPedido, Cantidad, CodEstadoPedido, Detalles)
+       VALUES ($1, $2, $3, $4, $5)
        RETURNING *`,
-      [CodPlatillo, CodPedido, Cantidad, Detalles || 'Sin observaciones']
+      [CodPlatillo, CodPedido, Cantidad, CodEstadoPedido, Detalles || 'Sin observaciones']
     );
 
     res.status(201).json(result.rows[0]);
@@ -766,7 +915,7 @@ app.get('/comandas/pagar', async (req, res) => {
   }
 });
 ////////////////////////////////////////// NOO
-app.get('/comandas/pagar1', async (req, res) => {
+/*app.get('/comandas/pagar1', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
@@ -791,6 +940,35 @@ app.get('/comandas/pagar1', async (req, res) => {
     res.status(500).send('Error al obtener las comandas');
   }
 });
+*/
+
+app.get('/comandas/pagar1', async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        p.CodPedido,
+        u.Nombre AS nombre_empleado,
+        m.Numero AS numero_mesa,
+        p.CodEstadoPedido
+      FROM pedido p
+      JOIN usuario u ON p.CodUsuario = u.CodUsuario
+      JOIN mesa m ON p.CodMesa = m.CodMesa
+      WHERE p.CodEstadoPedido NOT IN (5,6)
+        AND NOT EXISTS (
+          SELECT 1
+          FROM detalles d
+          WHERE d.CodPedido = p.CodPedido
+          GROUP BY d.CodPedido
+          HAVING COUNT(*) = SUM(CASE WHEN d.Detalles = 'Cancelado' THEN 1 ELSE 0 END)
+        );`
+    );
+    res.json(result.rows);
+  } catch (err) {
+    console.error('Error al obtener las comandas:', err);
+    res.status(500).send('Error al obtener las comandas');
+  }
+});
+
 ///////////////////////////////////////////////////////// NOO
 app.get('/ventas/:id_numero_orden', async (req, res) => {
   const {id_numero_orden} = req.params;

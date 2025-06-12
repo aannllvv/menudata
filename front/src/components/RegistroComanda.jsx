@@ -203,7 +203,7 @@ const RegistroComanda = () => {
           CodPedido: numeroOrden,
           Cantidad: item.cantidad,
           CodEstadoPedido: 1,
-          Detalles: data.detalles || "Sin observaciones"
+          Detalles: item.detalle || "Sin observaciones"
         });
       }
   
@@ -226,7 +226,7 @@ const RegistroComanda = () => {
   const agregarOrden = () => {
     if (!menuSeleccionado || cantidad < 1) return;
     const menu = menuOptions.find((item) => item.label === menuSeleccionado); 
-    const nuevaOrden = [...orden, { id_plato: menu.value, menu: menuSeleccionado, cantidad }];
+    const nuevaOrden = [...orden, { id_plato: menu.value, menu: menuSeleccionado, cantidad, detalle: "" }];
     setOrden(nuevaOrden);
     setMenuSeleccionado("");
     setCantidad(1);
@@ -236,6 +236,12 @@ const RegistroComanda = () => {
     const nuevaOrden = orden.filter((_, i) => i !== index);
     setOrden(nuevaOrden);
   };
+
+  const actualizarDetalleOrden = (index, nuevoDetalle) => {
+  const nuevaOrden = [...orden];
+  nuevaOrden[index].detalle = nuevoDetalle;
+  setOrden(nuevaOrden);
+};
 
   const handleClear = () => {
     handleReset(); // Limpia todos los estados
@@ -428,37 +434,24 @@ const RegistroComanda = () => {
             ) : (
             <ul className="list-group">
               {orden.map((item, index) => (
-                <li 
-                key={index} 
-                className="list-group-item d-flex justify-content-between"
-                >
-                  {item.menu} x {item.cantidad}
-                  <button className="btn btn-danger btn-sm" onClick={() => eliminarOrden(index)}>Eliminar</button>
+                <li key={index} className="list-group-item">
+                  <div className="d-flex justify-content-between align-items-center">
+                    {item.menu} x {item.cantidad}
+                    <button className="btn btn-danger btn-sm" onClick={() => eliminarOrden(index)}>Eliminar</button>
+                  </div>
+                  <textarea
+                    className="form-control mt-2"
+                    placeholder="Detalle específico para este platillo"
+                    value={item.detalle}
+                    onChange={(e) => actualizarDetalleOrden(index, e.target.value)}
+                  />
                 </li>
               ))}
             </ul>
             )}
           </div>
 
-          <div className="col-md-6 mb-3">
-            <label htmlFor="detalles" className="form-label fw-bold">
-              Detalles
-            </label>
-            <textarea
-              className="form-control"
-              {...register("detalles", {
-                maxLength: {
-                  value: 255,
-                  message: "Los detalles no pueden exceder los 255 caracteres",
-                },
-              })}
-              rows="3"
-              placeholder="Ingrese detalles de la orden"
-            ></textarea>
-            {errors.Detalles && (
-              <p className="text-danger">{errors.Detalles.message}</p>
-            )}
-          </div>
+          
         </div>
 
         <div className="row mt-4">

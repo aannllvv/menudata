@@ -2,8 +2,8 @@ import React, { useState, useEffect } from "react";
 import Axios from "axios";
 
 const ComandasCocina = () => {
-  const [comandas, setComandas] = useState([]);
   const [comandasPreparacion, setComandasPreparacion] = useState([]);
+  const [comandasListas, setComandasListas] = useState([]);
   const [comandasEntregadas, setComandasEntregadas] = useState([]);
   const [isUserActive, setIsUserActive] = useState(true);
 
@@ -11,30 +11,27 @@ const ComandasCocina = () => {
     const obtenerComandas = async () => {
       try {
         const response = await Axios.get("http://localhost:5001/comandas3");
-        console.log("Respuesta de la API:", response.data);
         if (response.status === 200 && Array.isArray(response.data)) {
-          setComandas(response.data.filter(comanda => comanda.estado_detalle === 1)); // En preparación
-          setComandasPreparacion(response.data.filter(comanda => comanda.estado_detalle === 2)); // Listas
-          setComandasEntregadas(response.data.filter(comanda => comanda.estado_detalle === 3)); // Entregadas
+          const data = response.data;
+          setComandasPreparacion(data.filter(c => c.codestadopedido === 1)); // En preparación
+          setComandasListas(data.filter(c => c.codestadopedido === 2));       // Lista
+          setComandasEntregadas(data.filter(c => c.codestadopedido === 4));   // Entregada
         }
       } catch (error) {
         console.error("Error al obtener comandas:", error);
       }
     };
+
     obtenerComandas();
 
-    let interval = setInterval(() => {
-      if (!isUserActive) {
-        obtenerComandas();
-      }
+    const interval = setInterval(() => {
+      if (!isUserActive) obtenerComandas();
     }, 10000);
-
     return () => clearInterval(interval);
   }, [isUserActive]);
 
   useEffect(() => {
     let activityTimeout;
-
     const resetActivity = () => {
       setIsUserActive(true);
       clearTimeout(activityTimeout);
@@ -44,8 +41,7 @@ const ComandasCocina = () => {
     window.addEventListener("mousemove", resetActivity);
     window.addEventListener("keydown", resetActivity);
     window.addEventListener("scroll", resetActivity);
-
-    activityTimeout = setTimeout(() => setIsUserActive(false), 30000);
+    resetActivity();
 
     return () => {
       window.removeEventListener("mousemove", resetActivity);
@@ -55,51 +51,28 @@ const ComandasCocina = () => {
     };
   }, []);
 
-  const cambiarEstadoComanda = async (id, nuevoEstado) => {
+  const cambiarEstadoComanda = async (codDetalles, nuevoEstado) => {
     try {
-      const requestBody = { estado_detalle: nuevoEstado };
-      if (nuevoEstado === 3) {
-        requestBody.fecha_entrega = new Date().toISOString().slice(0, 19).replace("T", " ");
-      }
-      await Axios.put(`http://localhost:5001/comandas3/${id}`, requestBody);
+      await Axios.put(`http://localhost:5001/comandas3/${codDetalles}`, {
+        CodEstadoPedido: nuevoEstado,
+      });
 
-      setComandas(prev => prev.filter(comanda => comanda.id_detalle !== id));
-      setComandasPreparacion(prev => prev.filter(comanda => comanda.id_detalle !== id));
-      setComandasEntregadas(prev => prev.filter(comanda => comanda.id_detalle !== id));
-
-      if (nuevoEstado === 2) {
-        setComandasPreparacion(prev => [...prev, { id_detalle: id, estado_detalle: 2 }]);
-      } else if (nuevoEstado === 3) {
-        setComandasEntregadas(prev => [...prev, { id_detalle: id, estado_detalle: 3, fecha_entrega: requestBody.fecha_entrega }]);
+      // Recargar los datos
+      const response = await Axios.get("http://localhost:5001/comandas3");
+      if (response.status === 200 && Array.isArray(response.data)) {
+        const data = response.data;
+        setComandasPreparacion(data.filter(c => c.codestadopedido === 1));
+        setComandasListas(data.filter(c => c.codestadopedido === 2));
+        setComandasEntregadas(data.filter(c => c.codestadopedido === 3));
       }
+
     } catch (error) {
       console.error("Error al cambiar el estado de la comanda:", error);
     }
   };
 
-  
-  const marcarComandaEntregada = async (id) => {
-    try {
-      const fechaEntrega = new Date().toISOString().slice(0, 19).replace("T", " ");
-  
-      const response = await Axios.put(`http://localhost:5001/comandas3/${id}`, { 
-        estado_detalle: 3, 
-        fecha_entrega: fechaEntrega 
-      });
-  
-      if (response.status === 200) {
-        setComandasPreparacion(prev => prev.filter(comanda => comanda.id_detalle !== id));
-        setComandasEntregadas(prev => [...prev, { ...response.data.comanda, estado_detalle: 3, fecha_entrega: fechaEntrega }]);
-      }
-    } catch (error) {
-      console.error("Error al marcar la comanda como entregada:", error);
-    }
-  };
-  
-  
-
   return (
-    <div className="container mt-4 table-responsive" >
+    <div className="container mt-4 table-responsive">
       <h2>Comandas en Preparación</h2>
       <table className="table table-bordered mt-3">
         <thead className="table-dark">
@@ -111,25 +84,26 @@ const ComandasCocina = () => {
             <th>Cantidad</th>
             <th>Detalles</th>
             <th>Acciones</th>
-            
           </tr>
         </thead>
         <tbody>
-          {comandas.map((comanda) => (
-            <tr key={comanda.estado_detalle}>
+          {comandasPreparacion.map((comanda) => (
+            <tr key={comanda.coddetalles}>
               <td>
-                Fecha: {comanda.fecha_pedido?.slice(0, 10)}<br />
-                Hora: {comanda.fecha_pedido?.slice(11, 19)}
+                Fecha: {comanda.fecha?.slice(0, 10)}<br />
+                Hora: {comanda.hora?.slice(0, 8)}
               </td>
               <td>{comanda.nombre_empleado}</td>
               <td>{comanda.numero_mesa}</td>
-              <td>{comanda.nombre_plato}</td>
+              <td>{comanda.nombre_platillo}</td>
               <td>{comanda.cantidad}</td>
-              <td>{comanda.detalles}</td>
+              <td>{comanda.detalle_platillo || 'Sin detalles'}</td>
               <td>
-                <button className="btn btn-success mx-2" 
-                  onClick={() => cambiarEstadoComanda(comanda.id_detalle, 2)}>
-                  Comanda Lista
+                <button
+                  className="btn btn-success mx-2"
+                  onClick={() => cambiarEstadoComanda(comanda.coddetalles, 2)}
+                >
+                  Marcar como Lista
                 </button>
               </td>
             </tr>
