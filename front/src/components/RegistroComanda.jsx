@@ -253,56 +253,58 @@ const RegistroComanda = () => {
       timer: 2000,
     });
   };
-
+/////////////////////
   const marcarDetalleEntregado = async (id_detalle) => {
-    try {
-      const response = await Axios.put(`http://localhost:5001/detalle/${id_detalle}`, { id_estado: 3 });
-      if (response.status === 200) {
-        obtenerDetalles();
-        obtenerComandasListas();
-        Swal.fire({
-          title: "Éxito",
-          text: "Comanda entregada correctamente.",
-          icon: "success",
-        });
-      }
-      
-    } catch (error) {
-      console.error("Error al marcar la comanda como entregada:", error);
-      Swal.fire({
-        title: "Error",
-        text: "Error al entregar la comanda.",
-        icon: "error",
-      });
-    }
-  };
-
-  const marcarDetalleCancelado = async (id) => {
-    try {
+  try {
+    const response = await Axios.put(`http://localhost:5001/detalle/${id_detalle}`, {
+      CodEstadoPedido: 4 // Asumiendo que 4 es "Entregado"
+    });
+    if (response.status === 200) {
       obtenerDetalles();
+      obtenerComandasListas();
       Swal.fire({
-        title: "Quieres cancelar el pedido?",
-        showDenyButton: true,
-        showCancelButton: false,
-        confirmButtonText: "Si",
-        denyButtonText: `No`,
-      }).then((result) => {
-        if (result.isConfirmed) {
-          Axios.put(`http://localhost:5001/detalle/${id}`, { id_estado: 6 })
-          Swal.fire("Pedido cancelado!", "", "success");
-          obtenerDetalles();
-          obtenerComandasListas();
-        } else if (result.isDenied) {
-          
-        }
+        title: "Éxito",
+        text: "Comanda entregada correctamente.",
+        icon: "success",
       });
-      
-    } catch (error) {
-      console.error("Error al marcar la comanda como cancelada:", error);
     }
+  } catch (error) {
+    console.error("Error al marcar la comanda como entregada:", error);
+    Swal.fire({
+      title: "Error",
+      text: "Error al entregar la comanda.",
+      icon: "error",
+    });
   }
-  
-  const openPopUp = () => {
+};
+
+const marcarDetalleCancelado = async (id) => {
+  try {
+    const result = await Swal.fire({
+      title: "¿Quieres cancelar el pedido?",
+      showDenyButton: true,
+      confirmButtonText: "Sí",
+      denyButtonText: "No",
+    });
+
+    if (!result.isConfirmed) return;
+
+    const response = await Axios.put(`http://localhost:5001/detalle/${id}`, {
+      CodEstadoPedido: 3 // Asumiendo que 3 es "Cancelado"
+    });
+
+    if (response.status === 200) {
+      Swal.fire("Pedido cancelado", "", "success");
+      await obtenerDetalles();
+      await obtenerComandasListas();
+    }
+  } catch (error) {
+    console.error("Error al cancelar el pedido:", error);
+    Swal.fire("Error", "No se pudo cancelar el pedido", "error");
+  }
+};
+
+const openPopUp = () => {
       setPopUp(true);
   };
 
@@ -492,14 +494,14 @@ const RegistroComanda = () => {
                   <button
                     type="button"
                     className="btn btn-primary mx-2"
-                    onClick={() => marcarDetalleEntregado(detalle.id_detalle, 3)}
+                    onClick={() => marcarDetalleEntregado(detalle.coddetalles, 4)}
                     disabled={detalle.estado_detalle === 3}>
                     {detalle.estado_detalle === 2 ? "Entregar" : "Entregada"}
                   </button>
                   <button
                     type="button"
                     className="btn btn-primary mx-2"
-                    onClick={() => marcarDetalleCancelado(detalle.id_detalle, 6)}>
+                    onClick={() => marcarDetalleCancelado(detalle.coddetalles, 3)}>
                     Anular
                   </button>
                   </td>

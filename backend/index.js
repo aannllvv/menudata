@@ -298,7 +298,7 @@ app.get('/meseros', async (req, res) => {
       SELECT u.CodUsuario AS "CodUsuario", u.Nombre AS "Nombre"
       FROM Usuario u
       JOIN RolUsuario ru ON u.CodRolUsuario = ru.CodRolUsuario
-      WHERE ru.RolUsuario = 'Camarero'
+      WHERE ru.RolUsuario = 'Mesero'
       ORDER BY u.CodUsuario ASC
     `);
     res.json(result.rows);
@@ -311,13 +311,15 @@ app.get('/meseros', async (req, res) => {
 // Obtener ventas por mesero NOO
 app.get('/reporte/ventas-meseros', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT e.nombre, COUNT(c.id_numero_orden) AS total_ventas
-       FROM comanda c
-       JOIN empleado e ON c.id_empleado = e.id_empleado
-       GROUP BY e.nombre
-       ORDER BY total_ventas DESC`
-    );
+    const result = await pool.query(`
+      SELECT u.Nombre AS nombre_mesero, COUNT(p.CodPedido) AS total_ventas
+      FROM pedido p
+      JOIN usuario u ON p.CodUsuario = u.CodUsuario
+      JOIN rolusuario r ON u.CodRolUsuario = r.CodRolUsuario
+      WHERE r.RolUsuario = 'Camarero'
+      GROUP BY u.Nombre
+      ORDER BY total_ventas DESC;
+    `);
     res.json(result.rows);
   } catch (err) {
     console.error("Error obteniendo ventas por mesero:", err);
@@ -328,14 +330,14 @@ app.get('/reporte/ventas-meseros', async (req, res) => {
 // Obtener platos más pedidos NOO
 app.get('/reporte/platos-mas-pedidos', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT m.nombre_plato, COUNT(c.id_plato) AS total_pedidos
-       FROM comanda c
-       JOIN menu m ON c.id_plato = m.id_plato
-       GROUP BY m.nombre_plato
-       ORDER BY total_pedidos DESC
-       LIMIT 10`
-    );
+    const result = await pool.query(`
+      SELECT pl.Nombre AS nombre_plato, COUNT(*) AS total_pedidos
+      FROM detalles d
+      JOIN platillo pl ON d.CodPlatillo = pl.CodPlatillo
+      GROUP BY pl.Nombre
+      ORDER BY total_pedidos DESC
+      LIMIT 10;
+    `);
     res.json(result.rows);
   } catch (err) {
     console.error("Error obteniendo platos más pedidos:", err);
@@ -346,14 +348,16 @@ app.get('/reporte/platos-mas-pedidos', async (req, res) => {
 // Obtener ventas totales por día NOO
 app.get('/reporte/ventas-totales', async (req, res) => {
   try {
-    const result = await pool.query(
-      `SELECT CAST(c.fecha_pedido AS DATE) AS fecha, 
-              SUM(m.precio * c.cantidad) AS total_ventas
-       FROM comanda c
-       JOIN menu m ON c.id_plato = m.id_plato
-       GROUP BY fecha
-       ORDER BY fecha DESC`
-    );
+    const result = await pool.query(`
+      SELECT 
+        p.Fecha AS fecha,
+        SUM(pl.Valor * d.Cantidad) AS total_ventas
+      FROM detalles d
+      JOIN pedido p ON d.CodPedido = p.CodPedido
+      JOIN platillo pl ON d.CodPlatillo = pl.CodPlatillo
+      GROUP BY p.Fecha
+      ORDER BY p.Fecha DESC;
+    `);
     res.json(result.rows);
   } catch (err) {
     console.error("Error obteniendo ventas totales:", err);
@@ -404,10 +408,10 @@ app.post('/mesa', async (req, res) => {
 
 app.get('/estado', async (req, res) => {
   try {
-    const result = await pool.query('SELECT * FROM estado ORDER BY id_estado ASC');
+    const result = await pool.query('SELECT * FROM EstadoPedido ORDER BY CodEstadoPedido ASC');
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error('Error al obtener estados:', err);
     res.status(500).send('Error al obtener estados');
   }
 });
@@ -595,38 +599,7 @@ app.get('/comandas2', async (req, res) => {
   }
 });
 
-/////////////////////////////////////////////// NOO
-/*app.get('/comandas3', async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT 
-        d.id_detalle,
-        d.id_numero_orden,
-        e.nombre AS nombre_empleado,
-        mn.nombre_plato,
-        ms.numero AS numero_mesa,
-        d.cantidad,
-        d.id_estado AS estado_detalle,
-        c.fecha_pedido,
-        c.fecha_entrega,
-        c.detalles
-      FROM detalle d
-      JOIN
-        comanda c ON d.id_numero_orden = c.id_numero_orden
-      JOIN 
-        empleado e ON c.id_empleado = e.id_empleado
-      JOIN
-        menu mn ON d.id_plato = mn.id_plato
-      JOIN
-        mesa ms ON c.id_mesa = ms.id_mesa
-      ORDER BY id_detalle ASC`);
-    res.json(result.rows);
-  } catch (err) {
-    console.error(err);
-    res.status(500).send('Error al obtener detalles');
-}
-});
-*/
+// llamar comandas a la cocina  sii
 
 app.get('/comandas3', async (req, res) => {
   try {
@@ -683,9 +656,13 @@ app.put('/comandas3/:id', async (req, res) => {
 });
 
 //guardar fecha de entrega comanda NOO
-app.put('/comandas3/:id', async (req, res) => {
-  const { id } = req.params; // id = CodPedido
-  const { estado_detalle } = req.body; // nuevo estado
+app.put('/comandas3/:CodPedido', async (req, res) => {
+  const CodPedido = parseInt(req.params.CodPedido, 10);
+  const CodEstadoPedido = parseInt(req.body.CodEstadoPedido, 10);
+
+  if (isNaN(CodPedido) || isNaN(CodEstadoPedido)) {
+    return res.status(400).json({ message: "CodPedido y CodEstadoPedido deben ser números válidos." });
+  }
 
   try {
     const result = await pool.query(
@@ -693,14 +670,14 @@ app.put('/comandas3/:id', async (req, res) => {
        SET CodEstadoPedido = $1
        WHERE CodPedido = $2
        RETURNING *`,
-      [estado_detalle, id]
+      [CodEstadoPedido, CodPedido]
     );
 
     if (result.rowCount === 0) {
       return res.status(404).json({ message: "Pedido no encontrado" });
     }
 
-    res.json({ message: "Estado actualizado correctamente", pedido: result.rows[0] });
+    res.status(200).json({ message: "Estado actualizado correctamente", pedido: result.rows[0] });
   } catch (error) {
     console.error("Error al actualizar el estado del pedido:", error);
     res.status(500).json({ message: "Error interno del servidor" });
@@ -748,7 +725,7 @@ app.get('/detalle', async (req, res) => {
         p.Nombre AS nombre_plato,
         m.Numero AS numero_mesa,
         d.Cantidad,
-        pe.CodEstadoPedido AS estado_detalle,
+        d.CodEstadoPedido AS estado_detalle,
         d.Detalles AS detalle_plato,
         pe.Fecha,
         pe.Hora,
@@ -832,45 +809,59 @@ app.post('/detalle', async (req, res) => {
 //});
 
 app.put('/detalle/:CodDetalle', async (req, res) => {
-  const { CodDetalle } = req.params;
-  const { CodEstadoPedido } = req.body;
+  const CodDetalle = parseInt(req.params.CodDetalle, 10);
+  const CodEstadoPedido = parseInt(req.body.CodEstadoPedido, 10);
+
+  if (isNaN(CodDetalle) || isNaN(CodEstadoPedido)) {
+    return res.status(400).json({ error: "CodDetalle y CodEstadoPedido deben ser válidos." });
+  }
 
   try {
-    // 1. Actualizar estado del detalle
-    const query1 = `
-      UPDATE detalle
-      SET CodEstadoPedido = $1
-      WHERE CodDetalle = $2;
-    `;
-    await pool.query(query1, [CodEstadoPedido, CodDetalle]);
+    const result1 = await pool.query(
+      `UPDATE detalles
+       SET CodEstadoPedido = $1
+       WHERE CodDetalles = $2
+       RETURNING *`,
+      [CodEstadoPedido, CodDetalle]
+    );
 
-    // 2. Actualizar hora de entrega en Pedido si corresponde
-    const query2 = `
-      UPDATE pedido
-      SET Hora = CURRENT_TIMESTAMP
-      WHERE CodPedido = (
-        SELECT CodPedido FROM detalle WHERE CodDetalle = $1
-      )
-      RETURNING *;
-    `;
-    const result = await pool.query(query2, [CodDetalle]);
+    if (result1.rowCount === 0) {
+      return res.status(404).json({ message: "Detalle no encontrado" });
+    }
 
-    res.status(200).json(result.rows[0]);
+    // Si quieres mantener una lógica de actualización de la tabla pedido:
+    const result2 = await pool.query(
+      `UPDATE pedido
+       SET Hora = CURRENT_TIMESTAMP
+       WHERE CodPedido = (
+         SELECT CodPedido FROM detalles WHERE CodDetalles = $1
+       )
+       RETURNING *`,
+      [CodDetalle]
+    );
+
+    return res.status(200).json({
+      message: "Estado actualizado correctamente",
+      detalleActualizado: result1.rows[0],
+      pedidoActualizado: result2.rows[0]
+    });
+
   } catch (err) {
-    console.error('Error al actualizar el detalle:', err);
-    res.status(500).send('Error al actualizar el detalle');
+    console.error("Error al actualizar el detalle:", err);
+    return res.status(500).send("Error interno del servidor");
   }
 });
-////////////////////////////////////////// NO
+
+//////////////////actualizar estado a pagado//////////////////////// NO
 app.put('/detalle', async (req, res) => {
   const { CodPedido } = req.body;
 
   try {
     const result = await pool.query(
-      `UPDATE detalle
+      `UPDATE detalles
        SET CodEstadoPedido = 5
        WHERE CodPedido = $1
-       AND CodEstadoPedido <> 6
+       AND CodEstadoPedido <> 3
        RETURNING *;`,
       [CodPedido]
     );
@@ -887,30 +878,32 @@ app.get('/comandas/pagar', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
-        c.id_numero_orden,
-        e.nombre || ' ' || e.apellido AS nombre_empleado,
-        c.id_mesa,
-        c.id_estado
-       FROM comanda c
-       JOIN empleado e ON c.id_empleado = e.id_empleado
-       WHERE NOT EXISTS (
+        p.CodPedido,
+        u.Nombre AS nombre_empleado,
+        m.Numero AS numero_mesa,
+        p.CodEstadoPedido
+      FROM pedido p
+      JOIN usuario u ON p.CodUsuario = u.CodUsuario
+      JOIN mesa m ON p.CodMesa = m.CodMesa
+      WHERE NOT EXISTS (
         SELECT 1
-        FROM detalle d
-        WHERE d.id_numero_orden = c.id_numero_orden
-        AND d.id_estado NOT IN (3, 6)
-       )
-       AND c.id_estado NOT IN (5, 6)
-       AND NOT EXISTS (
+        FROM detalles d
+        WHERE d.CodPedido = p.CodPedido
+        AND d.CodEstadoPedido NOT IN (3, 6)
+      )
+      AND p.CodEstadoPedido NOT IN (5, 6)
+      AND NOT EXISTS (
         SELECT 1
-        FROM detalle d
-        WHERE d.id_numero_orden = c.id_numero_orden
-        GROUP BY d.id_numero_orden
-        HAVING COUNT(DISTINCT d.id_estado) = 1 AND MAX(d.id_estado) = 6
+        FROM detalles d
+        WHERE d.CodPedido = p.CodPedido
+        GROUP BY d.CodPedido
+        HAVING COUNT(DISTINCT d.CodEstadoPedido) = 1 AND MAX(d.CodEstadoPedido) = 6
       );`
     );
+
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error("Error al obtener las comandas para pagar:", err);
     res.status(500).send('Error al obtener las comandas');
   }
 });
@@ -970,27 +963,29 @@ app.get('/comandas/pagar1', async (req, res) => {
 });
 
 ///////////////////////////////////////////////////////// NOO
-app.get('/ventas/:id_numero_orden', async (req, res) => {
-  const {id_numero_orden} = req.params;
+app.get('/ventas/:CodPedido', async (req, res) => {
+  const { CodPedido } = req.params;
 
   try {
     const query = `
-    SELECT 
-        d.id_detalle,
-        e.nombre || ' ' || e.apellido AS nombre_empleado,
-        c.id_mesa AS numero_mesa,
-        d.id_estado,
-        d.cantidad,
-        m.nombre_plato,
-        m.precio_unitario,
-        CAST((d.cantidad * m.precio_unitario) AS INT) AS total_parcial
-    FROM detalle d
-    JOIN menu m ON d.id_plato = m.id_plato
-    JOIN comanda c ON d.id_numero_orden = c.id_numero_orden
-    JOIN empleado e ON c.id_empleado = e.id_empleado
-    WHERE d.id_numero_orden = $1 AND d.id_estado != 6;`;
+      SELECT 
+        d.CodDetalles,
+        u.Nombre AS nombre_empleado,
+        m.Numero AS numero_mesa,
+        d.CodEstadoPedido,
+        d.Cantidad,
+        p.Nombre AS nombre_platillo,
+        p.Valor AS precio_unitario,
+        CAST((d.Cantidad * p.Valor) AS INT) AS total_parcial
+      FROM detalles d
+      JOIN platillo p ON d.CodPlatillo = p.CodPlatillo
+      JOIN pedido pe ON d.CodPedido = pe.CodPedido
+      JOIN usuario u ON pe.CodUsuario = u.CodUsuario
+      JOIN mesa m ON pe.CodMesa = m.CodMesa
+      WHERE d.CodPedido = $1 AND d.CodEstadoPedido != 6;
+    `;
 
-    const result = await pool.query(query, [id_numero_orden]);
+    const result = await pool.query(query, [CodPedido]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ message: "No se encontraron detalles para esta comanda." });
@@ -999,10 +994,10 @@ app.get('/ventas/:id_numero_orden', async (req, res) => {
     const totalFactura = result.rows.reduce((acc, item) => acc + item.total_parcial, 0);
 
     res.status(200).json({
-      id_numero_orden,
+      CodPedido,
       detalles: result.rows,
       totalFactura
-  });
+    });
   } catch (error) {
     console.error("Error al generar la factura:", error);
     res.status(500).json({ error: "Error interno del servidor" });
@@ -1010,34 +1005,47 @@ app.get('/ventas/:id_numero_orden', async (req, res) => {
 });
 //////////////////////////////////////////////// NOO
 app.post('/ventas', async (req, res) => {
-  const { id_numero_orden, comanda } = req.body;
+  const { CodPedido, comanda } = req.body;
   try {
+    // 1. Insertar nueva venta
     const venta = await pool.query(
-      `INSERT INTO venta (id_numero_orden, comanda) VALUES ($1, 0) RETURNING *`,
-      [id_numero_orden]
+      `INSERT INTO venta (CodPedido, Fecha, Hora, ValorTotal)
+       VALUES ($1, CURRENT_DATE, CURRENT_TIME, 0)
+       RETURNING CodVenta`,
+      [CodPedido]
     );
 
-    const ventaId = venta.rows[0].id;
+    const ventaId = venta.rows[0].codventa;
     let total = 0;
 
-    for(let item of comanda ) {
+    // 2. Insertar cada producto de la comanda
+    for (let item of comanda) {
       const subtotal = item.cantidad * item.precio_unitario;
       total += subtotal;
 
       await pool.query(
-        `INSERT INTO detalles_venta (factura_id, producto, cantidad, precio , subtotal) VALUES ($1, $2, $3, $4, $5)`,
+        `INSERT INTO detalles_venta (CodVenta, Producto, Cantidad, Precio, Subtotal)
+         VALUES ($1, $2, $3, $4, $5)`,
         [ventaId, item.producto, item.cantidad, item.precio_unitario, subtotal]
       );
     }
 
+    // 3. Actualizar total en la venta
     await pool.query(
-      `UPDATE ventas SET total = $1 WHERE id = $2`
+      `UPDATE venta SET ValorTotal = $1 WHERE CodVenta = $2`,
       [total, ventaId]
     );
 
-    res.json({message:"Factura creada", ventaId});
+    // 4. Opcional: actualizar estado del pedido a pagado (ejemplo CodEstadoPedido = 5)
+    await pool.query(
+      `UPDATE pedido SET CodEstadoPedido = 5 WHERE CodPedido = $1`,
+      [CodPedido]
+    );
+
+    res.json({ message: "Factura creada", ventaId });
   } catch (error) {
-      res.status(500).json({error: error.message});
+    console.error("Error al crear la factura:", error);
+    res.status(500).json({ error: "Error al registrar la venta" });
   }
 });
 //////////////////////////////////////////////// NOO
@@ -1045,52 +1053,65 @@ app.get('/comandas4', async (req, res) => {
   try {
     const result = await pool.query(
       `SELECT 
-        d.id_detalle,
-        d.id_numero_orden,
-        c.id_estado,
-        est.nombre_estado AS estado,
-        CONCAT(e.nombre, ' ', e.apellido ) AS nombre_empleado,
-        mn.nombre_plato,
-        ms.numero AS numero_mesa,
-        d.cantidad,
-        c.fecha_pedido,
-        mn.precio_unitario,
-        c.fecha_entrega,
-        COALESCE(c.detalles, 'Sin detalles') AS detalles
+        d.CodDetalles,
+        d.CodPedido,
+        d.CodEstadoPedido,
+        ep.Estado AS estado,
+        u.Nombre AS nombre_empleado,
+        pl.Nombre AS nombre_platillo,
+        m.Numero AS numero_mesa,
+        d.Cantidad,
+        p.Fecha,
+        p.Hora,
+        pl.Valor AS precio_unitario,
+        COALESCE(d.Detalles, 'Sin detalles') AS detalles
       FROM 
-        detalle d
+        detalles d
       JOIN 
-        comanda c ON d.id_numero_orden = c.id_numero_orden
+        pedido p ON d.CodPedido = p.CodPedido
       JOIN 
-        empleado e ON c.id_empleado = e.id_empleado
-      JOIN
-        menu mn ON d.id_plato = mn.id_plato
-      JOIN
-        mesa ms ON c.id_mesa = ms.id_mesa
-      JOIN
-        estado est ON c.id_estado = est.id_estado
-      ORDER BY c.id_numero_orden ASC`
-
+        usuario u ON p.CodUsuario = u.CodUsuario
+      JOIN 
+        platillo pl ON d.CodPlatillo = pl.CodPlatillo
+      JOIN 
+        mesa m ON p.CodMesa = m.CodMesa
+      JOIN 
+        estadoPedido ep ON d.CodEstadoPedido = ep.CodEstadoPedido
+      ORDER BY d.CodPedido ASC`
     );
+
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error("Error al obtener las comandas con detalles:", err);
     res.status(500).send('Error al obtener las comandas con detalles');
-  }
+  }
 });
 ///////////////////////////////////////////// NOO
-app.get('/detalle/:id_numero_orden', async (req, res) => {
-  const {id_numero_orden} = req.params;
+app.get('/detalle/:CodPedido', async (req, res) => {
+  const { CodPedido } = req.params;
 
   try {
     const result = await pool.query(
-      "SELECT * FROM detalle WHERE id_numero_orden = $1", 
-      [id_numero_orden]
+      `SELECT 
+         d.CodDetalles,
+         d.CodPedido,
+         d.CodPlatillo,
+         d.Cantidad,
+         d.Detalles,
+         d.CodEstadoPedido,
+         ep.Estado AS estado_nombre,
+         p.Nombre AS nombre_platillo,
+         p.Valor AS precio_unitario
+       FROM detalles d
+       JOIN platillo p ON d.CodPlatillo = p.CodPlatillo
+       JOIN estadoPedido ep ON d.CodEstadoPedido = ep.CodEstadoPedido
+       WHERE d.CodPedido = $1`,
+      [CodPedido]
     );
 
     res.json(result.rows);
   } catch (err) {
-    console.error(err);
+    console.error('Error al obtener detalles:', err);
     res.status(500).send('Error al obtener detalles');
   }
 });

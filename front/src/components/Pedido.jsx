@@ -63,7 +63,7 @@ const ComandasCocina = () => {
         const data = response.data;
         setComandasPreparacion(data.filter(c => c.codestadopedido === 1));
         setComandasListas(data.filter(c => c.codestadopedido === 2));
-        setComandasEntregadas(data.filter(c => c.codestadopedido === 3));
+        setComandasEntregadas(data.filter(c => c.codestadopedido === 4));
       }
 
     } catch (error) {
