@@ -6,6 +6,8 @@ import Select from "react-select";
 import Axios from "axios";
 import Swal from "sweetalert2";
 import '../styles/RegistroComanda.css';
+import EditarComandaModal from "./EditarComandaModal";
+
 
 const RegistroComanda = () => {
   const {
@@ -34,6 +36,8 @@ const RegistroComanda = () => {
   const [idNumeroOrden, setIdNumeroOrden] = useState(null);  
   const [comandaEditada, setComandaEditada] = useState(null);
   const [botonHabilitado, setBotonHabilitado] = useState(false);
+  const [modalAbierto, setModalAbierto] = useState(false);
+  const [pedidoSeleccionado, setPedidoSeleccionado] = useState(null);
 // Listo
   const cargarEmpleados = async () => {
     try {
@@ -131,20 +135,17 @@ const RegistroComanda = () => {
 
 
   const obtenerDetalles = async () => {
-    try {
-      const response = await Axios.get('http://localhost:5001/detalle');
-      console.log("Respuesta de la API:", response.data);
-      if (response.status === 200) {
-        // Filtrar comandas según el estado
-        setDetallesPreparacion(response.data.filter(detalle => (
-          detalle.estado_detalle === 2 || 
-          detalle.estado_detalle === 3)
-        ));
-      }
-    } catch (error) {
-      console.error("Error al obtener comandas:", error);
+  try {
+    const response = await Axios.get('http://localhost:5001/detalle');
+    console.log("Respuesta de la API:", response.data);
+    if (response.status === 200) {
+      // Solo mostrar los que están en estado “Listo para retirar”
+      setDetallesPreparacion(response.data.filter(detalle => detalle.estado_detalle === 2));
     }
-  };
+  } catch (error) {
+    console.error("Error al obtener comandas:", error);
+  }
+};
 
   const obtenerComandasListas = async () => {
     try {
@@ -311,16 +312,13 @@ const openPopUp = () => {
   const closePopUp = () => {
       setPopUp(false);
   };
+
+  //////////////////////////// EDITAR COMANDA ///////////////////////////////////////////
   const editarComanda = (comanda) => {
-    setComandaEditada(comanda);
-    setSelectedMesero({
-      value: comanda.id_empleado,
-      label: comanda.nombre_empleado
-    });
-    setMesaSeleccionada(comanda.id_mesa);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-    
-  };
+  console.log("Comanda recibida:", comanda);
+  setPedidoSeleccionado(comanda.codpedido); // este valor va a codPedido
+  setModalAbierto(true);
+};
   
   const verificarYAbrirPopUp = async (numeroOrden) => {
     try {
@@ -523,7 +521,7 @@ const openPopUp = () => {
               <tbody>
                 {pagarComanda.map((comanda, index) => (
                   <tr key={index} style={{ backgroundColor: "yellow" }}>
-                    <td>{comanda.id_mesa}</td>
+                    <td>{comanda.numero_mesa}</td>
                     <td>{comanda.nombre_empleado}</td>
                     <td>
                     <button
@@ -547,6 +545,12 @@ const openPopUp = () => {
             </table>
           </div>
       </form>
+      <EditarComandaModal
+        isOpen={modalAbierto}
+        closeModal={() => setModalAbierto(false)}
+        codPedido={pedidoSeleccionado}
+        actualizarPedidos={obtenerComandasListas}
+      />
       <FacturaPopUp 
         popUp={popUp} 
         closePopUp={() => setPopUp(false)} 

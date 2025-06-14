@@ -852,6 +852,81 @@ app.put('/detalle/:CodDetalle', async (req, res) => {
   }
 });
 
+
+///////////////// Actualizar pedido /////////////
+
+/*app.get('/pedido/:CodPedido', async (req, res) => {
+  const { CodPedido } = req.params;
+
+  try {
+    // Obtener datos del pedido + mesero + mesa
+    const pedidoResult = await pool.query(`
+      SELECT p.CodPedido, p.CodUsuario, u.Nombre AS nombre_empleado, 
+             p.CodMesa, m.Numero AS numero_mesa
+      FROM pedido p
+      JOIN usuario u ON p.CodUsuario = u.CodUsuario
+      JOIN mesa m ON p.CodMesa = m.CodMesa
+      WHERE p.CodPedido = $1
+    `, [CodPedido]);
+
+    if (pedidoResult.rowCount === 0) {
+      return res.status(404).json({ message: 'Pedido no encontrado' });
+    }
+
+    // Obtener detalles asociados
+    const detallesResult = await pool.query(`
+      SELECT d.CodDetalles, d.CodPlatillo, pla.Nombre AS nombre_plato, 
+             d.Cantidad, d.Detalles
+      FROM detalles d
+      JOIN platillo pla ON d.CodPlatillo = pla.CodPlatillo
+      WHERE d.CodPedido = $1
+    `, [CodPedido]);
+
+    res.json({
+      pedido: pedidoResult.rows[0],
+      detalles: detallesResult.rows
+    });
+  } catch (err) {
+    console.error('Error al obtener el pedido:', err);
+    res.status(500).send('Error interno al obtener el pedido');
+  }
+});*/
+
+app.get('/pedido/:CodPedido', async (req, res) => {
+  const { CodPedido } = req.params;
+
+  try {
+    const pedidoResult = await pool.query(`
+      SELECT p.CodPedido, p.CodUsuario, u.Nombre AS nombre_empleado, 
+             p.CodMesa, m.Numero AS numero_mesa
+      FROM pedido p
+      JOIN usuario u ON p.CodUsuario = u.CodUsuario
+      JOIN mesa m ON p.CodMesa = m.CodMesa
+      WHERE p.CodPedido = $1
+    `, [CodPedido]);
+
+    if (pedidoResult.rowCount === 0) {
+      return res.status(404).json({ message: 'Pedido no encontrado' });
+    }
+
+    const detallesResult = await pool.query(`
+      SELECT d.CodDetalles, d.CodPlatillo, pla.Nombre AS nombre_plato, 
+             d.Cantidad, d.Detalles
+      FROM Detalles d
+      JOIN Platillo pla ON d.CodPlatillo = pla.CodPlatillo
+      WHERE d.CodPedido = $1
+    `, [CodPedido]);
+
+    res.json({
+      pedido: pedidoResult.rows[0],
+      detalles: detallesResult.rows
+    });
+  } catch (err) {
+    console.error('Error al obtener el pedido:', err);
+    res.status(500).send('Error interno al obtener el pedido');
+  }
+});
+
 //////////////////actualizar estado a pagado//////////////////////// NO
 app.put('/detalle', async (req, res) => {
   const { CodPedido } = req.body;
